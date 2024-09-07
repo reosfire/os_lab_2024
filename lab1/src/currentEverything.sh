@@ -1,0 +1,3 @@
+pwd
+date
+echo $PATH
