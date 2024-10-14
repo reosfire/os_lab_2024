@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <sys/time.h>
@@ -38,18 +39,24 @@ int main(int argc, char **argv) {
         switch (option_index) {
           case 0:
             seed = atoi(optarg);
-            printf("seed must be a positive number\n");
-            return 1;
+            if (seed <= 0) {
+              printf("seed must be a positive number\n");
+              return 1;
+            }
             break;
           case 1:
             array_size = atoi(optarg);
-            printf("array size must be a positive number\n");
-            return 1;
+            if (array_size <= 0) {
+              printf("array size must be a positive number\n");
+              return 1;
+            }
             break;
           case 2:
             pnum = atoi(optarg);
-            printf("pnum must be a positive number\n");
-            return 1;
+            if (pnum <= 0) {
+              printf("pnum must be a positive number\n");
+              return 1;
+            }
             break;
           case 3:
             with_files = true;
@@ -89,19 +96,40 @@ int main(int argc, char **argv) {
   struct timeval start_time;
   gettimeofday(&start_time, NULL);
 
+  pid_t* pids = malloc(pnum * sizeof(pid_t));
+  int* pipes = malloc(pnum * 2 * sizeof(int));
+
   for (int i = 0; i < pnum; i++) {
+    int* readDescriptor = pipes + i * 2;
+    pipe(readDescriptor);
+
     pid_t child_pid = fork();
+
     if (child_pid >= 0) {
       // successful fork
-      active_child_processes += 1;
+      pids[i] = child_pid;
+      active_child_processes++;
       if (child_pid == 0) {
         int arrayStart = 0;
-        struct MinMax GetMinMax(array_size);
+        struct MinMax chunkResult = GetMinMax(array, array_size / pnum * i, array_size / pnum * (i + 1));
 
         if (with_files) {
-          // use files here
+          char fileName[40];
+          sprintf(fileName, "./%d.txt", getpid());
+          FILE* temporaryResultsFile = fopen(fileName, "w");
+          if (!temporaryResultsFile) {
+            printf("Cannot open file %s\n", fileName);
+            return 1;
+          }
+
+          fprintf(temporaryResultsFile, "%d %d", chunkResult.min, chunkResult.max);
+          fclose(temporaryResultsFile);
         } else {
-          // use pipe here
+          int* writeDescriptor = readDescriptor + 1;
+          write(*writeDescriptor, &chunkResult, sizeof(struct MinMax));
+
+          close(*readDescriptor);
+          close(*writeDescriptor);
         }
         return 0;
       }
@@ -113,9 +141,14 @@ int main(int argc, char **argv) {
   }
 
   while (active_child_processes > 0) {
-    wait(NULL);
+    int pid = pids[active_child_processes - 1];
+    int code = waitpid(pid, NULL, 0);
+    if (!code) {
+      printf("Failed to wait for process with id: %d", pid);
+      return 1;
+    }
 
-    active_child_processes -= 1;
+    active_child_processes--;
   }
 
   struct MinMax min_max;
@@ -127,9 +160,19 @@ int main(int argc, char **argv) {
     int max = INT_MIN;
 
     if (with_files) {
-      // read from files
+      char fileName[40];
+      sprintf(fileName, "./%d.txt", pids[i]);
+      FILE* temporaryResultsFile = fopen(fileName, "r");
+
+      fscanf(temporaryResultsFile, "%d %d", &min, &max);
+      fclose(temporaryResultsFile);
+      remove(fileName);
     } else {
-      // read from pipes
+      int readDescriptor = pipes[i * 2];
+      struct MinMax buff;
+      read(readDescriptor, &buff, sizeof(struct MinMax));
+      min = buff.min;
+      max = buff.max;
     }
 
     if (min < min_max.min) min_max.min = min;
