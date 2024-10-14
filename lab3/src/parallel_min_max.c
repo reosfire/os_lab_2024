@@ -22,8 +22,6 @@ int main(int argc, char **argv) {
   bool with_files = false;
 
   while (true) {
-    int current_optind = optind ? optind : 1;
-
     static struct option options[] = {{"seed", required_argument, 0, 0},
                                       {"array_size", required_argument, 0, 0},
                                       {"pnum", required_argument, 0, 0},
@@ -40,18 +38,18 @@ int main(int argc, char **argv) {
         switch (option_index) {
           case 0:
             seed = atoi(optarg);
-            // your code here
-            // error handling
+            printf("seed must be a positive number\n");
+            return 1;
             break;
           case 1:
             array_size = atoi(optarg);
-            // your code here
-            // error handling
+            printf("array size must be a positive number\n");
+            return 1;
             break;
           case 2:
             pnum = atoi(optarg);
-            // your code here
-            // error handling
+            printf("pnum must be a positive number\n");
+            return 1;
             break;
           case 3:
             with_files = true;
@@ -97,9 +95,8 @@ int main(int argc, char **argv) {
       // successful fork
       active_child_processes += 1;
       if (child_pid == 0) {
-        // child process
-
-        // parallel somehow
+        int arrayStart = 0;
+        struct MinMax GetMinMax(array_size);
 
         if (with_files) {
           // use files here
@@ -116,7 +113,7 @@ int main(int argc, char **argv) {
   }
 
   while (active_child_processes > 0) {
-    // your code here
+    wait(NULL);
 
     active_child_processes -= 1;
   }
