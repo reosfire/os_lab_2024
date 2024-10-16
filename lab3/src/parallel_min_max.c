@@ -99,9 +99,18 @@ int main(int argc, char **argv) {
   pid_t* pids = malloc(pnum * sizeof(pid_t));
   int* pipes = malloc(pnum * 2 * sizeof(int));
 
+  int baseChunkSize = array_size / pnum;
+  int extendedCount = array_size % pnum;
+  int j = 0;
+
   for (int i = 0; i < pnum; i++) {
     int* readDescriptor = pipes + i * 2;
     pipe(readDescriptor);
+
+    int startIndex = j;
+    int endIndex = startIndex + baseChunkSize;
+    if (i < extendedCount) endIndex++;
+    j = endIndex;
 
     pid_t child_pid = fork();
 
@@ -110,8 +119,7 @@ int main(int argc, char **argv) {
       pids[i] = child_pid;
       active_child_processes++;
       if (child_pid == 0) {
-        int arrayStart = 0;
-        struct MinMax chunkResult = GetMinMax(array, array_size / pnum * i, array_size / pnum * (i + 1));
+        struct MinMax chunkResult = GetMinMax(array, startIndex, endIndex);
 
         if (with_files) {
           char fileName[40];
@@ -186,6 +194,8 @@ int main(int argc, char **argv) {
   elapsed_time += (finish_time.tv_usec - start_time.tv_usec) / 1000.0;
 
   free(array);
+  free(pids);
+  free(pipes);
 
   printf("Min: %d\n", min_max.min);
   printf("Max: %d\n", min_max.max);
