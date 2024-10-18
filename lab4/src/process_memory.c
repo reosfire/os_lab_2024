@@ -17,7 +17,7 @@ char *cptr = "This message is output by the function showit()\n"; /* Static */
 char buffer1[25];
 int showit(); /* Function prototype */
 
-main() {
+int main() {
   int i = 0; /* Automatic variable */
 
   /* Printing addressing information */
@@ -50,4 +50,6 @@ int showit(p) char *p;
     printf("Allocation error\n");
     exit(1);
   }
+
+  return 0;
 }
