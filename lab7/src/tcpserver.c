@@ -7,11 +7,17 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define SERV_PORT 10050
 #define BUFSIZE 100
 #define SADDR struct sockaddr
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    printf("Usage: tcpserver <port>\n");
+    return -1;
+  }
+
+  int port = atoi(argv[1]);
+
   const size_t kSize = sizeof(struct sockaddr_in);
 
   int lfd, cfd;
@@ -28,7 +34,7 @@ int main() {
   memset(&servaddr, 0, kSize);
   servaddr.sin_family = AF_INET;
   servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(SERV_PORT);
+  servaddr.sin_port = htons(port);
 
   if (bind(lfd, (SADDR *)&servaddr, kSize) < 0) {
     perror("bind");

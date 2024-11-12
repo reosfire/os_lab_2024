@@ -8,12 +8,18 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#define SERV_PORT 20001
 #define BUFSIZE 1024
 #define SADDR struct sockaddr
 #define SLEN sizeof(struct sockaddr_in)
 
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc != 2) {
+    printf("Usage: udpserver <port>\n");
+    return -1;
+  }
+
+  int port = atoi(argv[1]);
+
   int sockfd, n;
   char mesg[BUFSIZE], ipadr[16];
   struct sockaddr_in servaddr;
@@ -27,7 +33,7 @@ int main() {
   memset(&servaddr, 0, SLEN);
   servaddr.sin_family = AF_INET;
   servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  servaddr.sin_port = htons(SERV_PORT);
+  servaddr.sin_port = htons(port);
 
   if (bind(sockfd, (SADDR *)&servaddr, SLEN) < 0) {
     perror("bind problem");
