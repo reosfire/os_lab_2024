@@ -12,6 +12,7 @@
 #include <sys/types.h>
 
 #include "pthread.h"
+#include "common.h"
 
 struct FactorialArgs {
   uint64_t begin;
@@ -19,23 +20,14 @@ struct FactorialArgs {
   uint64_t mod;
 };
 
-uint64_t MultModulo(uint64_t a, uint64_t b, uint64_t mod) {
-  uint64_t result = 0;
-  a = a % mod;
-  while (b > 0) {
-    if (b % 2 == 1)
-      result = (result + a) % mod;
-    a = (a * 2) % mod;
-    b /= 2;
-  }
-
-  return result % mod;
-}
-
 uint64_t Factorial(const struct FactorialArgs *args) {
   uint64_t ans = 1;
 
-  // TODO: your code here
+  uint64_t current = args->begin;
+  while (current < args->end) {
+    ans = MultModulo(ans, current, args->mod);
+    current++;
+  }
 
   return ans;
 }
@@ -156,12 +148,20 @@ int main(int argc, char **argv) {
 
       fprintf(stdout, "Receive: %llu %llu %llu\n", begin, end, mod);
 
+      uint64_t count = end - begin;
+      uint64_t baseChunkSize = count / tnum;
+      uint32_t extendedChunksCount = count % tnum;
+
+      uint32_t prevEnd = begin;
       struct FactorialArgs args[tnum];
       for (uint32_t i = 0; i < tnum; i++) {
         // TODO: parallel somehow
-        args[i].begin = 1;
-        args[i].end = 1;
+        args[i].begin = prevEnd;
+        args[i].end = prevEnd + baseChunkSize + (i < extendedChunksCount ? 1 : 0);
         args[i].mod = mod;
+
+        prevEnd = args[i].end;
+        printf("Calculation on segment [%d;%d)\n", args[i].begin, args[i].end);
 
         if (pthread_create(&threads[i], NULL, ThreadFactorial,
                            (void *)&args[i])) {
